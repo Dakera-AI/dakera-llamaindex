@@ -30,7 +30,7 @@ def test_delete_calls_client(index_store):
 
 def test_add_upserts_nodes(index_store):
     store, mock_client = index_store
-    node = TextNode(node_id="node-1", text="Hello world", metadata={"source": "test"})
+    node = TextNode(id_="node-1", text="Hello world", metadata={"source": "test"})
     ids = store.add([node])
     assert ids == ["node-1"]
     mock_client.upsert_text.assert_called_once()

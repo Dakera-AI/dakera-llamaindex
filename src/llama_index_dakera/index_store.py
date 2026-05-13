@@ -63,7 +63,7 @@ class DakeraIndexStore(BasePydanticVectorStore):
                                           top_k=query.similarity_top_k or 10, include_text=True)
         nodes, ids, similarities = [], [], []
         for r in response.results:
-            nodes.append(TextNode(node_id=r.id, text=r.text or "", metadata=r.metadata or {}))
+            nodes.append(TextNode(id_=r.id, text=r.text or "", metadata=r.metadata or {}))
             ids.append(r.id)
             similarities.append(r.score)
         return VectorStoreQueryResult(nodes=nodes, ids=ids, similarities=similarities)
