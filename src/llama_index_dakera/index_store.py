@@ -36,11 +36,13 @@ class DakeraIndexStore(BasePydanticVectorStore):
     @property
     def client(self) -> DakeraClient:
         if self._client is None:
-            raise RuntimeError("DakeraIndexStore: client was not initialized; model_post_init may not have run")
+            raise RuntimeError(
+                "DakeraIndexStore: client was not initialized; model_post_init may not have run"
+            )
         return self._client
 
     def add(self, nodes: Sequence[BaseNode], **kwargs: Any) -> list[str]:
-        docs: list[dict[str, Any]] = []
+        docs: list[Any] = []
         ids: list[str] = []
         for node in nodes:
             node_id = node.node_id or str(uuid.uuid4())
@@ -61,7 +63,7 @@ class DakeraIndexStore(BasePydanticVectorStore):
                                           top_k=query.similarity_top_k or 10, include_text=True)
         nodes, ids, similarities = [], [], []
         for r in response.results:
-            nodes.append(TextNode(node_id=r.id, text=r.text or "", metadata=r.metadata or {}))
+            nodes.append(TextNode(id_=r.id, text=r.text or "", metadata=r.metadata or {}))
             ids.append(r.id)
             similarities.append(r.score)
         return VectorStoreQueryResult(nodes=nodes, ids=ids, similarities=similarities)
