@@ -1,12 +1,18 @@
 """DakeraIndexStore — LlamaIndex vector store using Dakera server-side embedding."""
 
 from __future__ import annotations
+
 import uuid
+from collections.abc import Sequence
 from typing import Any
+
 from dakera import AsyncDakeraClient, DakeraClient
+from dakera.models import TextDocument
 from llama_index.core.schema import BaseNode, MetadataMode, TextNode
 from llama_index.core.vector_stores.types import (
-    BasePydanticVectorStore, VectorStoreQuery, VectorStoreQueryResult,
+    BasePydanticVectorStore,
+    VectorStoreQuery,
+    VectorStoreQueryResult,
 )
 
 
@@ -33,8 +39,9 @@ class DakeraIndexStore(BasePydanticVectorStore):
         assert self._client is not None
         return self._client
 
-    def add(self, nodes: list[BaseNode], **kwargs: Any) -> list[str]:
-        docs, ids = [], []
+    def add(self, nodes: Sequence[BaseNode], **kwargs: Any) -> list[str]:
+        docs: list[TextDocument | dict[str, Any]] = []
+        ids: list[str] = []
         for node in nodes:
             node_id = node.node_id or str(uuid.uuid4())
             ids.append(node_id)

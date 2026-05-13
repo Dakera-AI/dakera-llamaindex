@@ -1,7 +1,9 @@
 """Tests for DakeraIndexStore (LlamaIndex integration)."""
 
 from unittest.mock import MagicMock, patch
+
 import pytest
+
 from llama_index_dakera import DakeraIndexStore
 
 
@@ -11,7 +13,9 @@ def index_store():
          patch("llama_index_dakera.index_store.AsyncDakeraClient"):
         mock_client = MagicMock()
         MC.return_value = mock_client
-        store = DakeraIndexStore(api_url="http://localhost:3000", api_key="test", namespace="test-ns")
+        store = DakeraIndexStore(
+            api_url="http://localhost:3000", api_key="test", namespace="test-ns"
+        )
         store._client = mock_client
         yield store, mock_client
 
