@@ -83,7 +83,7 @@ def test_query_returns_nodes_and_scores(index_store):
 def test_query_uses_default_top_k(index_store):
     store, mock_client = index_store
     mock_client.query_text.return_value = MagicMock(results=[])
-    q = VectorStoreQuery(query_str="hello")
+    q = VectorStoreQuery(query_str="hello", similarity_top_k=None)
     store.query(q)
     call_kwargs = mock_client.query_text.call_args[1]
     assert call_kwargs["top_k"] == 10  # default when similarity_top_k is None
