@@ -32,9 +32,13 @@ def test_put_stores_memory(mem_store):
 
 def test_get_recalls_memories(mem_store):
     store, mock_client, _ = mem_store
-    mock_client.recall.return_value = [{"content": "The user prefers Python"}]
+    mem = MagicMock(content="The user prefers Python", id="m-1", score=0.9)
+    mock_recall = MagicMock()
+    mock_recall.memories = [mem]
+    mock_client.recall.return_value = mock_recall
     results = store.get("What does the user prefer?")
     assert len(results) == 1
+    assert results[0]["content"] == "The user prefers Python"
     mock_client.recall.assert_called_once_with(
         "agent-1", query="What does the user prefer?", top_k=3, min_importance=None)
 
