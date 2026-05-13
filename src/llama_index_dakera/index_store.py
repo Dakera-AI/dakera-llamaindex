@@ -7,17 +7,19 @@ from collections.abc import Sequence
 from typing import Any
 
 from dakera import AsyncDakeraClient, DakeraClient
-from dakera.models import TextDocument
 from llama_index.core.schema import BaseNode, MetadataMode, TextNode
 from llama_index.core.vector_stores.types import (
     BasePydanticVectorStore,
     VectorStoreQuery,
     VectorStoreQueryResult,
 )
+from pydantic import ConfigDict
 
 
 class DakeraIndexStore(BasePydanticVectorStore):
     """LlamaIndex vector store backed by Dakera AI — server-side embedding."""
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     api_url: str
     namespace: str
@@ -27,20 +29,18 @@ class DakeraIndexStore(BasePydanticVectorStore):
     stores_text: bool = True
     flat_metadata: bool = False
 
-    class Config:
-        arbitrary_types_allowed = True
-
     def model_post_init(self, __context: Any) -> None:
         self._client = DakeraClient(self.api_url, api_key=self.api_key)
         self._async_client = AsyncDakeraClient(self.api_url, api_key=self.api_key)
 
     @property
     def client(self) -> DakeraClient:
-        assert self._client is not None
+        if self._client is None:
+            raise RuntimeError("DakeraIndexStore: client was not initialized; model_post_init may not have run")
         return self._client
 
     def add(self, nodes: Sequence[BaseNode], **kwargs: Any) -> list[str]:
-        docs: list[TextDocument | dict[str, Any]] = []
+        docs: list[dict[str, Any]] = []
         ids: list[str] = []
         for node in nodes:
             node_id = node.node_id or str(uuid.uuid4())
@@ -55,7 +55,8 @@ class DakeraIndexStore(BasePydanticVectorStore):
         self.client.delete(self.namespace, filter={"ref_doc_id": {"$eq": ref_doc_id}})
 
     def query(self, query: VectorStoreQuery, **kwargs: Any) -> VectorStoreQueryResult:
-        assert query.query_str
+        if not query.query_str:
+            raise ValueError("DakeraIndexStore.query requires a non-empty query_str")
         response = self.client.query_text(self.namespace, text=query.query_str,
                                           top_k=query.similarity_top_k or 10, include_text=True)
         nodes, ids, similarities = [], [], []
