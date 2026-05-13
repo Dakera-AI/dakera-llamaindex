@@ -1,6 +1,7 @@
 """DakeraMemoryStore — LlamaIndex agent memory backed by Dakera AI."""
 
 from __future__ import annotations
+import dataclasses
 from typing import Any
 from dakera import AsyncDakeraClient, DakeraClient
 
@@ -29,7 +30,7 @@ class DakeraMemoryStore:
             self.agent_id, query=query,
             top_k=top_k if top_k is not None else self.recall_k,
             min_importance=self.min_importance if self.min_importance > 0 else None)
-        return list(response.memories)
+        return [dataclasses.asdict(m) for m in response.memories]
 
     def delete(self, memory_id: str) -> None:
         self._client.forget(self.agent_id, memory_id)
@@ -42,10 +43,11 @@ class DakeraMemoryStore:
             metadata=metadata)
 
     async def aget(self, query: str, top_k: int | None = None) -> list[dict[str, Any]]:
-        return await self._async_client.recall(
+        response = await self._async_client.recall(
             self.agent_id, query=query,
             top_k=top_k if top_k is not None else self.recall_k,
             min_importance=self.min_importance if self.min_importance > 0 else None)
+        return [dataclasses.asdict(m) for m in response.memories]
 
     def __repr__(self) -> str:
         return f"DakeraMemoryStore(agent_id={self.agent_id!r}, recall_k={self.recall_k})"
