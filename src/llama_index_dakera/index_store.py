@@ -42,7 +42,7 @@ class DakeraIndexStore(BasePydanticVectorStore):
         return self._client
 
     def add(self, nodes: Sequence[BaseNode], **kwargs: Any) -> list[str]:
-        docs: list[dict[str, Any]] = []
+        docs: list[Any] = []
         ids: list[str] = []
         for node in nodes:
             node_id = node.node_id or str(uuid.uuid4())
