@@ -1,12 +1,16 @@
 """DakeraIndexStore — LlamaIndex vector store using Dakera server-side embedding."""
 
 from __future__ import annotations
+
 import uuid
 from typing import Any
+
 from dakera import AsyncDakeraClient, DakeraClient
 from llama_index.core.schema import BaseNode, MetadataMode, TextNode
 from llama_index.core.vector_stores.types import (
-    BasePydanticVectorStore, VectorStoreQuery, VectorStoreQueryResult,
+    BasePydanticVectorStore,
+    VectorStoreQuery,
+    VectorStoreQueryResult,
 )
 
 
