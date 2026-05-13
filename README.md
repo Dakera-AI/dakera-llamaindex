@@ -2,6 +2,7 @@
 
 [![CI](https://github.com/Dakera-AI/dakera-llamaindex/actions/workflows/ci.yml/badge.svg)](https://github.com/Dakera-AI/dakera-llamaindex/actions/workflows/ci.yml)
 [![PyPI](https://img.shields.io/pypi/v/llamaindex-dakera)](https://pypi.org/project/llamaindex-dakera/)
+[![Downloads](https://img.shields.io/pypi/dm/llamaindex-dakera)](https://pypi.org/project/llamaindex-dakera/)
 [![Python](https://img.shields.io/pypi/pyversions/llamaindex-dakera)](https://pypi.org/project/llamaindex-dakera/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
