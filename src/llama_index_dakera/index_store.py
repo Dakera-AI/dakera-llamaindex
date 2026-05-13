@@ -7,6 +7,7 @@ from collections.abc import Sequence
 from typing import Any
 
 from dakera import AsyncDakeraClient, DakeraClient
+from dakera.models import TextDocument
 from llama_index.core.schema import BaseNode, MetadataMode, TextNode
 from llama_index.core.vector_stores.types import (
     BasePydanticVectorStore,
@@ -39,7 +40,7 @@ class DakeraIndexStore(BasePydanticVectorStore):
         return self._client
 
     def add(self, nodes: Sequence[BaseNode], **kwargs: Any) -> list[str]:
-        docs: list[dict[str, Any]] = []
+        docs: list[TextDocument | dict[str, Any]] = []
         ids: list[str] = []
         for node in nodes:
             node_id = node.node_id or str(uuid.uuid4())
