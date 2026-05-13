@@ -36,7 +36,9 @@ class DakeraIndexStore(BasePydanticVectorStore):
     @property
     def client(self) -> DakeraClient:
         if self._client is None:
-            raise RuntimeError("DakeraIndexStore: client was not initialized; model_post_init may not have run")
+            raise RuntimeError(
+                "DakeraIndexStore: client was not initialized; model_post_init may not have run"
+            )
         return self._client
 
     def add(self, nodes: Sequence[BaseNode], **kwargs: Any) -> list[str]:
