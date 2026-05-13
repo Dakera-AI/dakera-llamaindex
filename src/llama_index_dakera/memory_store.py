@@ -25,10 +25,11 @@ class DakeraMemoryStore:
             metadata=metadata)
 
     def get(self, query: str, top_k: int | None = None) -> list[dict[str, Any]]:
-        return self._client.recall(
+        response = self._client.recall(
             self.agent_id, query=query,
             top_k=top_k if top_k is not None else self.recall_k,
             min_importance=self.min_importance if self.min_importance > 0 else None)
+        return list(response.memories)
 
     def delete(self, memory_id: str) -> None:
         self._client.forget(self.agent_id, memory_id)
