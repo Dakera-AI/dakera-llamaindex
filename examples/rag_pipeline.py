@@ -28,10 +28,22 @@ store = DakeraIndexStore(
 )
 
 nodes = [
-    TextNode(text="Dakera provides persistent memory for AI agents.", metadata={"topic": "overview"}),
-    TextNode(text="Vector search uses cosine similarity over dense embeddings.", metadata={"topic": "search"}),
-    TextNode(text="LlamaIndex orchestrates data ingestion and retrieval for LLMs.", metadata={"topic": "framework"}),
-    TextNode(text="Server-side embedding removes the need for local GPU resources.", metadata={"topic": "architecture"}),
+    TextNode(
+        text="Dakera provides persistent memory for AI agents.",
+        metadata={"topic": "overview"},
+    ),
+    TextNode(
+        text="Vector search uses cosine similarity over embeddings.",
+        metadata={"topic": "search"},
+    ),
+    TextNode(
+        text="LlamaIndex orchestrates data ingestion for LLMs.",
+        metadata={"topic": "framework"},
+    ),
+    TextNode(
+        text="Server-side embedding removes the need for local GPUs.",
+        metadata={"topic": "architecture"},
+    ),
 ]
 
 print("Indexing nodes...")
