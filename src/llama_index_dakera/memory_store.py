@@ -67,8 +67,10 @@ class DakeraMemoryStore:
     ) -> list[dict[str, Any]]:
         """Semantic recall with optional filtering."""
         k = top_k if top_k is not None else self.recall_k
-        min_imp = min_importance if min_importance is not None else (
-            self.min_importance if self.min_importance > 0 else None
+        min_imp = (
+            min_importance
+            if min_importance is not None
+            else (self.min_importance if self.min_importance > 0 else None)
         )
         kwargs: dict[str, Any] = {"top_k": k}
         if min_imp:
