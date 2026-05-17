@@ -47,8 +47,13 @@ class DakeraIndexStore(BasePydanticVectorStore):
         for node in nodes:
             node_id = node.node_id or str(uuid.uuid4())
             ids.append(node_id)
-            docs.append({"id": node_id, "text": node.get_content(metadata_mode=MetadataMode.NONE),
-                         "metadata": node.metadata or {}})
+            docs.append(
+                {
+                    "id": node_id,
+                    "text": node.get_content(metadata_mode=MetadataMode.NONE),
+                    "metadata": node.metadata or {},
+                }
+            )
         if docs:
             self.client.upsert_text(self.namespace, docs)
         return ids
@@ -59,8 +64,12 @@ class DakeraIndexStore(BasePydanticVectorStore):
     def query(self, query: VectorStoreQuery, **kwargs: Any) -> VectorStoreQueryResult:
         if not query.query_str:
             raise ValueError("DakeraIndexStore.query requires a non-empty query_str")
-        response = self.client.query_text(self.namespace, text=query.query_str,
-                                          top_k=query.similarity_top_k or 10, include_text=True)
+        response = self.client.query_text(
+            self.namespace,
+            text=query.query_str,
+            top_k=query.similarity_top_k or 10,
+            include_text=True,
+        )
         nodes, ids, similarities = [], [], []
         for r in response.results:
             nodes.append(TextNode(id_=r.id, text=r.text or "", metadata=r.metadata or {}))

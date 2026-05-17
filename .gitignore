@@ -15,3 +15,5 @@ build/
 *.pem
 *.p12
 credentials.json
+ruvector.db
+.claude-flow/
