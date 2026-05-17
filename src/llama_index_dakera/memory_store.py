@@ -81,7 +81,7 @@ class DakeraMemoryStore:
             kwargs["memory_type"] = memory_type
         response = self._client.recall(self.agent_id, query=query, **kwargs)
         return [
-            {"content": m.content, "id": m.id, "score": m.score, "tags": m.tags}
+            {"content": m.content, "id": m.id, "score": m.score, "metadata": m.metadata}
             for m in response.memories
         ]
 
@@ -89,13 +89,14 @@ class DakeraMemoryStore:
         self,
         query: str,
         top_k: int | None = None,
-        *,
-        alpha: float = 0.5,
     ) -> list[dict[str, Any]]:
-        """Combined vector + BM25 search."""
+        """Combined vector + BM25 search via routing."""
         k = top_k if top_k is not None else self.recall_k
-        result = self._client.search_memories(self.agent_id, query=query, top_k=k, alpha=alpha)
-        return [{"content": m.content, "id": m.id, "score": m.score} for m in result.memories]
+        results = self._client.search_memories(self.agent_id, query=query, top_k=k)
+        return [
+            {"content": m.get("content", ""), "id": m.get("id", ""), "score": m.get("score", 0.0)}
+            for m in results
+        ]
 
     def batch_get(self, queries: list[str], top_k: int | None = None) -> list[list[dict[str, Any]]]:
         """Run multiple recall queries in batch."""
@@ -114,11 +115,12 @@ class DakeraMemoryStore:
 
     def batch_delete(self, memory_ids: list[str]) -> None:
         """Delete multiple memories."""
-        self._client.batch_forget(self.agent_id, memory_ids=memory_ids)
+        for mid in memory_ids:
+            self._client.forget(self.agent_id, mid)
 
     def update_importance(self, memory_id: str, importance: float) -> None:
         """Update a memory's importance score."""
-        self._client.update_importance(self.agent_id, memory_id=memory_id, importance=importance)
+        self._client.update_importance(self.agent_id, [memory_id], importance)
 
     def consolidate(self) -> Any:
         """Deduplicate and consolidate memories."""
@@ -173,7 +175,7 @@ class DakeraMemoryStore:
             kwargs["memory_type"] = memory_type
         response = await self._async_client.recall(self.agent_id, query=query, **kwargs)
         return [
-            {"content": m.content, "id": m.id, "score": m.score, "tags": m.tags}
+            {"content": m.content, "id": m.id, "score": m.score, "metadata": m.metadata}
             for m in response.memories
         ]
 
