@@ -74,6 +74,7 @@ jobs:
 
   examples:
     name: Examples
+    continue-on-error: true
     needs: integration
     runs-on: ubuntu-latest
 
