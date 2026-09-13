@@ -23,7 +23,7 @@ Dakera is a self-hosted memory server. Spin it up with Docker:
 ```bash
 docker run -d \
   --name dakera \
-  -p 3300:3300 \
+  -p 3000:3000 \
   -e DAKERA_ROOT_API_KEY=dk-mykey \
   ghcr.io/dakera-ai/dakera:latest
 ```
@@ -37,7 +37,7 @@ curl -sSfL https://raw.githubusercontent.com/Dakera-AI/dakera-deploy/main/docker
 DAKERA_API_KEY=dk-mykey docker compose up -d
 
 # Verify it's running
-curl http://localhost:3300/health
+curl http://localhost:3000/health
 ```
 
 > Full deployment guide: [github.com/Dakera-AI/dakera-deploy](https://github.com/Dakera-AI/dakera-deploy)
@@ -55,14 +55,14 @@ from llama_index_dakera import DakeraMemoryStore, DakeraIndexStore
 
 # Agent memory
 memory = DakeraMemoryStore(
-    api_url="http://localhost:3300",
+    api_url="http://localhost:3000",
     api_key="dk-mykey",
     agent_id="my-agent",
 )
 
 # RAG index — no local embedding model needed
 vector_store = DakeraIndexStore(
-    api_url="http://localhost:3300",
+    api_url="http://localhost:3000",
     api_key="dk-mykey",
     namespace="my-docs",
 )
@@ -93,7 +93,7 @@ from llama_index.llms.openai import OpenAI
 from llama_index_dakera import DakeraMemoryStore
 
 store = DakeraMemoryStore(
-    api_url="http://localhost:3300",
+    api_url="http://localhost:3000",
     api_key="dk-mykey",
     agent_id="react-agent",
 )
@@ -147,7 +147,7 @@ documents = SimpleDirectoryReader("./docs").load_data()
 
 # Create index backed by Dakera
 vector_store = DakeraIndexStore(
-    api_url="http://localhost:3300",
+    api_url="http://localhost:3000",
     api_key="dk-mykey",
     namespace="product-docs",
 )
@@ -174,7 +174,7 @@ from llama_index.core.chat_engine import CondensePlusContextChatEngine
 from llama_index_dakera import DakeraIndexStore, DakeraMemoryStore
 
 vector_store = DakeraIndexStore(
-    api_url="http://localhost:3300",
+    api_url="http://localhost:3000",
     api_key="dk-mykey",
     namespace="product-docs",
 )
@@ -182,7 +182,7 @@ storage_context = StorageContext.from_defaults(vector_store=vector_store)
 index = VectorStoreIndex.from_defaults(storage_context=storage_context)
 
 memory_store = DakeraMemoryStore(
-    api_url="http://localhost:3300",
+    api_url="http://localhost:3000",
     api_key="dk-mykey",
     agent_id="doc-chat",
 )
