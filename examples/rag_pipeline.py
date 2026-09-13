@@ -5,7 +5,7 @@ LlamaIndex's VectorStoreQuery interface. No local embeddings needed —
 Dakera handles embedding server-side.
 
 Usage:
-    export DAKERA_API_URL="http://localhost:3300"
+    export DAKERA_API_URL="http://localhost:3000"
     export DAKERA_API_KEY="dk-..."          # optional
     pip install llamaindex-dakera llama-index-core
     python rag_pipeline.py
@@ -18,7 +18,7 @@ from llama_index.core.vector_stores.types import VectorStoreQuery
 
 from llama_index_dakera import DakeraIndexStore
 
-api_url = os.environ.get("DAKERA_API_URL", "http://localhost:3300")
+api_url = os.environ.get("DAKERA_API_URL", "http://localhost:3000")
 api_key = os.environ.get("DAKERA_API_KEY", "")
 
 store = DakeraIndexStore(

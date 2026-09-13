@@ -1,7 +1,7 @@
 """Batch operations with LlamaIndex and Dakera.
 
 Usage:
-    export DAKERA_API_URL="http://localhost:3300"
+    export DAKERA_API_URL="http://localhost:3000"
     python batch_operations.py
 """
 
@@ -9,7 +9,7 @@ import os
 
 from llama_index_dakera import DakeraMemoryStore
 
-api_url = os.environ.get("DAKERA_API_URL", "http://localhost:3300")
+api_url = os.environ.get("DAKERA_API_URL", "http://localhost:3000")
 api_key = os.environ.get("DAKERA_API_KEY", "")
 
 memory = DakeraMemoryStore(
