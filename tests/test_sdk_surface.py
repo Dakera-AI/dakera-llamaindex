@@ -42,7 +42,7 @@ def test_summarize_sends_memory_ids():
         kg = DakeraKnowledgeGraph(api_url="http://localhost:3000", agent_id="a")
     kg.summarize(["m1", "m2"], target_type="semantic")
     client.summarize.assert_called_once_with(
-        "a", memory_ids=["m1", "m2"], target_type="semantic", dry_run=False
+        "a", memory_ids=["m1", "m2"], target_type="semantic"
     )
 
 
@@ -65,3 +65,21 @@ def test_index_store_delete_uses_filter_not_delete_all():
         store = DakeraIndexStore(api_url="http://localhost:3000", namespace="docs")
     store.delete("doc-1")
     client.delete.assert_called_once_with("docs", filter={"ref_doc_id": {"$eq": "doc-1"}})
+
+
+def test_memory_store_get_forwards_tags():
+    from dakera import AsyncDakeraClient
+    from dakera.models import RecallResponse
+
+    from llama_index_dakera import DakeraMemoryStore
+
+    client = _spec_client()
+    client.recall.return_value = RecallResponse.from_dict({"memories": []})
+    with patch("llama_index_dakera.memory_store.DakeraClient", return_value=client), patch(
+        "llama_index_dakera.memory_store.AsyncDakeraClient",
+        return_value=create_autospec(AsyncDakeraClient, instance=True),
+    ):
+        store = DakeraMemoryStore(api_url="http://localhost:3000", agent_id="a")
+    assert store.get("q", tags=["work"]) == []
+    _, kwargs = client.recall.call_args
+    assert kwargs["tags"] == ["work"]

@@ -37,5 +37,5 @@ ids = [
     store.put("Project Alpha uses Python and is led by Sarah Chen.")["id"],
     store.put("Sarah Chen works with Bob Smith on the backend.")["id"],
 ]
-summary = kg.summarize(ids, dry_run=True)
+summary = kg.summarize(ids)
 print(f"Summary of {summary['source_count']} memories: {summary['summary_memory']['content'][:80]}")
