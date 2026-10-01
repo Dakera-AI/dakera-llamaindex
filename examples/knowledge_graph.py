@@ -10,6 +10,7 @@ Usage:
 import os
 
 from llama_index_dakera.knowledge_graph import DakeraKnowledgeGraph
+from llama_index_dakera.memory_store import DakeraMemoryStore
 
 api_url = os.environ.get("DAKERA_API_URL", "http://localhost:3000")
 api_key = os.environ.get("DAKERA_API_KEY", "")
@@ -31,5 +32,10 @@ for edge in results["edges"][:5]:
     print(f"  {edge}")
 
 print("\n--- Summarize ---")
-summary = kg.summarize()
-print(f"Summary: {summary}")
+store = DakeraMemoryStore(api_url=api_url, api_key=api_key, agent_id="llamaindex-kg-demo")
+ids = [
+    store.put("Project Alpha uses Python and is led by Sarah Chen.")["id"],
+    store.put("Sarah Chen works with Bob Smith on the backend.")["id"],
+]
+summary = kg.summarize(ids)
+print(f"Summary of {summary['source_count']} memories: {summary['summary_memory']['content'][:80]}")

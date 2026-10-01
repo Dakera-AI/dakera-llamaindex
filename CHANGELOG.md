@@ -1,5 +1,36 @@
 # Changelog
 
+## [0.3.0] - 2026-10-01
+
+Dakera server **v0.12.0** support. Requires the `dakera` Python SDK **0.13.1** or later;
+works with Dakera server v0.12.0 and v0.11.108.
+
+### Changed
+- Dependency: `dakera>=0.13.1` (was `>=0.8.6`).
+- `DakeraKnowledgeGraph.link(source_id, target_id, *, label=None)` sends the agent id the server
+  requires (every link was a 422 before) and returns the server's `{from_id, to_id, edge_type}`.
+  The `edge_type` argument is gone: the server records every explicit link as `linked_by`.
+- `DakeraKnowledgeGraph.summarize(memory_ids, *, target_type=None)` needs at least two ids and has
+  no `dry_run`: the server has no dry run and always stores the summary (dakera 0.13.1 raises on
+  `dry_run=True` rather than silently writing).
+- `DakeraKnowledgeGraph.build(memory_id, depth=None)`: the seed `memory_id` is required by the server.
+- `DakeraMemoryStore.get(tags=...)` / `aget(tags=...)` work: dakera 0.13.1 `recall()` accepts
+  `tags` (it raised `TypeError` before).
+
+### Fixed
+- `DakeraSessionManager.list()` unwraps the `{"sessions": [...], "total": n}` answer of
+  `GET /v1/sessions`; it iterated over the envelope's keys and raised `AttributeError`.
+- The `knowledge_graph.py` example summarizes memories it stores (it called `summarize()`
+  without memory ids and failed with a 422).
+- CI: integration and example jobs run against `ghcr.io/dakera-ai/dakera:0.12.0`; mypy runs
+  against each matrix interpreter (numpy 2.5 stubs use 3.12-only syntax that a pinned 3.10
+  target cannot parse); the security audit upgrades `setuptools` and documents the ignored
+  nltk advisory PYSEC-2026-3740, which has no fixed release yet.
+
+### Tests
+- `tests/test_sdk_surface.py` checks the SDK calls with `create_autospec(DakeraClient)`, so
+  a method or argument the SDK does not have fails the test.
+
 ## [0.1.1] - 2026-05-13
 
 ### Fixed
