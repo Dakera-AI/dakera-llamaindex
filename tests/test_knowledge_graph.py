@@ -99,8 +99,19 @@ def test_build(kg):
 
 def test_summarize(kg):
     graph, mock_client = kg
-    mock_client.summarize.return_value = {"summary": "3 clusters"}
-    assert graph.summarize() == {"summary": "3 clusters"}
+    mock_client.summarize.return_value = {"summary_memory": {"id": "s1"}, "source_count": 2}
+    assert graph.summarize(["m1", "m2"]) == {"summary_memory": {"id": "s1"}, "source_count": 2}
+    # POST /v1/knowledge/summarize requires memory_ids (a 422 without them).
+    mock_client.summarize.assert_called_once_with(
+        "test-agent", memory_ids=["m1", "m2"], target_type=None, dry_run=False
+    )
+
+
+def test_summarize_requires_memory_ids(kg):
+    graph, mock_client = kg
+    with pytest.raises(ValueError):
+        graph.summarize([])
+    mock_client.summarize.assert_not_called()
 
 
 def test_deduplicate(kg):

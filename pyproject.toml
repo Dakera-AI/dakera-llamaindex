@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "llamaindex-dakera"
-version = "0.2.0"
+version = "0.3.0"
 description = "LlamaIndex integration for the Dakera AI memory platform"
 readme = "README.md"
 license = {text = "MIT"}
@@ -23,7 +23,7 @@ classifiers = [
     "Typing :: Typed",
 ]
 keywords = ["llamaindex", "llama-index", "dakera", "memory", "vector", "ai", "rag"]
-dependencies = ["dakera>=0.8.6", "llama-index-core>=0.10.0"]
+dependencies = ["dakera>=0.13.0", "llama-index-core>=0.10.0"]
 
 [project.optional-dependencies]
 dev = ["pytest>=7.0.0", "pytest-asyncio>=0.21.0", "responses>=0.23.0",
@@ -52,8 +52,11 @@ target-version = "py310"
 select = ["E", "F", "I", "UP"]
 
 [tool.mypy]
-python_version = "3.10"
+# No python_version pin: CI runs mypy on each matrix interpreter (3.10, 3.12), so
+# each run checks against the dependency versions installed for that interpreter
+# (numpy >= 2.5 ships 3.12-only stub syntax that a 3.10 target cannot parse).
 ignore_missing_imports = true
 check_untyped_defs = true
 warn_return_any = true
 warn_unused_ignores = true
+
