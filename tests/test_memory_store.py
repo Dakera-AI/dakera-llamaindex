@@ -3,6 +3,7 @@
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from dakera import RecallResponse
 
 from llama_index_dakera import DakeraMemoryStore
 
@@ -32,15 +33,15 @@ def test_put_stores_memory(mem_store):
 
 def test_get_recalls_memories(mem_store):
     store, mock_client, _ = mem_store
-    mem = MagicMock(content="The user prefers Python", id="m-1", score=0.9, metadata=None)
-    mock_recall = MagicMock()
-    mock_recall.memories = [mem]
-    mock_client.recall.return_value = mock_recall
+    mock_client.recall.return_value = RecallResponse.from_dict(
+        {"memories": [{"id": "m-1", "content": "The user prefers Python", "rank_score": 0.9}]}
+    )
     results = store.get("What does the user prefer?")
     assert len(results) == 1
     assert results[0]["content"] == "The user prefers Python"
+    assert results[0]["score"] == 0.9
     mock_client.recall.assert_called_once_with(
-        "agent-1", query="What does the user prefer?", top_k=3)
+        "agent-1", query="What does the user prefer?", top_k=3, neighborhood_mode="separate")
 
 
 def test_delete_calls_forget(mem_store):

@@ -31,7 +31,7 @@ for item in items:
 print(f"Stored {len(items)} memories.")
 
 print("\n--- Batch recall ---")
-queries = ["shipping", "payment", "returns"]
+queries = ["shipping", "how can I pay", "returns"]
 results = memory.batch_get(queries, top_k=2)
 for query, matches in zip(queries, results):
     print(f"\n  Query: '{query}'")

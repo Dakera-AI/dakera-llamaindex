@@ -1,5 +1,46 @@
 # Changelog
 
+## [0.4.0] - 2026-10-27
+
+Dakera server **v0.12.3** support. Requires the `dakera` Python SDK **0.14.1** or later; works
+with Dakera server v0.12.0 – v0.12.3 (the v0.12.3 additions are ignored by older servers).
+
+### Added
+- `DakeraMemoryStore.put(..., event_time=)` / `aput(..., event_time=)`: when the memory's event
+  happened (Unix seconds, an RFC 3339 string or a timezone-aware `datetime`); the server keeps it
+  as `_dakera_event_time` and uses it for recency and `since` / `until`.
+- `DakeraMemoryStore.get(..., rerank=)` / `aget(..., rerank=)`; `get()` / `aget()` results carry
+  `importance`, and `score` is the server's `rank_score` when it sends one.
+- `DakeraMemoryStore.consolidate(memory_ids=None, *, target_type=None)` merges the given memories.
+- `DakeraSessionManager.start(..., idle_timeout_secs=)`, `touch()` and `end(summary=None)`: the
+  server ends a session after 4 h without activity by default. `get()` and `list()` return
+  `ended_reason`; `get()` also returns the session `summary`.
+- `tests/test_integration.py`: live tests against a server, skipped unless `DAKERA_API_URL` is set.
+
+### Changed
+- Dependency: `dakera>=0.14.1` (was `>=0.13.1`).
+- `DakeraMemoryStore.get()`, `aget()` and `batch_get()` return at most `top_k` ranked memories. A
+  v0.12.3 server appends a session's neighbouring memories to the results by default, so a recall
+  could return more than `top_k` and mix unranked context in; recalls now ask for
+  `neighborhood_mode="separate"` and keep the ranked results only (a v0.12.2 server's inline
+  context is cut at `top_k`).
+- `DakeraSessionManager.memories()` leaves out the sentence sub-memories the server derives from
+  each stored memory (tagged `dakera-curated`), which `GET /v1/sessions/{id}/memories` lists next
+  to them; `include_derived=True` keeps them.
+
+### Fixed
+- `DakeraEntityExtractor.configure()` raised `TypeError` (it did not send the `extract_entities`
+  the SDK requires) and targeted a namespace named after the agent id. It now configures the
+  agent's memory namespace `_dakera_agent_{agent_id}` and takes `extract_entities` (default `True`).
+- Examples `advanced_memory.py` and `batch_operations.py` used queries that recall nothing on a
+  v0.12 server (`advanced_memory.py` would also have read an `importance` the results lacked).
+- README: the `DakeraMemoryStore` option is `recall_k`, not `top_k`.
+
+### CI
+- Integration tests and examples run against `ghcr.io/dakera-ai/dakera:0.12.3`. That image ships
+  no `curl`, so the service container has no in-container health check; the job polls `/health`
+  from the runner instead.
+
 ## [0.3.0] - 2026-10-01
 
 Dakera server **v0.12.0** support. Requires the `dakera` Python SDK **0.13.1** or later;

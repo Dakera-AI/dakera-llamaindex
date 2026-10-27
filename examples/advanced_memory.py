@@ -26,6 +26,6 @@ memory.put("user is allergic to peanuts", importance=0.95)
 memory.put("birthday is March 15", importance=0.8, tags=["personal"])
 
 print("--- High-importance recall ---")
-results = memory.get("important facts", min_importance=0.7)
+results = memory.get("what should I know about the user", min_importance=0.7)
 for r in results:
     print(f"  [{r['importance']:.1f}] {r['content']}")

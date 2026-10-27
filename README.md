@@ -78,7 +78,8 @@ pip install llamaindex-dakera
 
 **Requirements:** Python ≥ 3.10, a running Dakera server (see Step 1 above)
 
-**Compatibility:** Compatible with Dakera server v0.12.0 and v0.11.108 (dakera Python SDK >= 0.13.1).
+**Compatibility:** Built for Dakera server v0.12.3 (`dakera` Python SDK >= 0.14.1); also works with
+servers v0.12.0 – v0.12.2, where the v0.12.3 additions below are ignored.
 
 ---
 
@@ -129,8 +130,21 @@ print(response)  # "Your project is called NeuralBridge."
 | `api_url` | `str` | — | Dakera server URL |
 | `api_key` | `str` | `""` | Dakera API key |
 | `agent_id` | `str` | — | Namespace for this agent's memories |
-| `top_k` | `int` | `5` | Memories to retrieve per query |
+| `recall_k` | `int` | `5` | Memories to retrieve per query |
 | `min_importance` | `float` | `0.0` | Minimum importance for recall |
+| `default_importance` | `float` | `0.7` | Importance assigned to stored memories |
+
+### Recall and storage details
+
+- `get()`, `aget()` and `batch_get()` return at most `top_k` (default `recall_k`) ranked memories,
+  each with `score` (the server's ranking score) and, from `get()` / `aget()`, `importance`. A
+  v0.12.3 server can add a session's neighbouring memories as context; they are requested
+  separately and left out.
+- `put(..., event_time=...)` / `aput(...)` record when the event happened (Unix seconds, an RFC 3339
+  string or a timezone-aware `datetime`); the server uses it for recency instead of the ingest time.
+- `DakeraSessionManager.start(idle_timeout_secs=...)` / `touch()`: the server ends a session after
+  4 h without activity by default (`ended_reason: "idle"`). `memories(session_id)` lists the
+  memories stored in the session (`include_derived=True` adds the server's sentence sub-memories).
 
 ---
 
