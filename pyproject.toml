@@ -33,6 +33,8 @@ dev = ["pytest>=7.0.0", "pytest-asyncio>=0.21.0", "responses>=0.23.0",
 Homepage = "https://github.com/dakera-ai/dakera-llamaindex"
 Documentation = "https://dakera.ai/integrations/llamaindex.html"
 Repository = "https://github.com/dakera-ai/dakera-llamaindex"
+Changelog = "https://github.com/Dakera-AI/dakera-llamaindex/blob/main/CHANGELOG.md"
+Issues = "https://github.com/Dakera-AI/dakera-llamaindex/issues"
 
 [tool.setuptools.packages.find]
 where = ["src"]
