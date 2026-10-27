@@ -91,9 +91,7 @@ class DakeraSessionManager:
             for s in sessions
         ]
 
-    def memories(
-        self, session_id: str, *, include_derived: bool = False
-    ) -> list[dict[str, Any]]:  # type: ignore[valid-type]
+    def memories(self, session_id: str, *, include_derived: bool = False) -> list[dict[str, Any]]:  # type: ignore[valid-type]
         """Get the memories stored in a session, oldest first.
 
         The server also lists the sentence sub-memories it derives from them (tagged
