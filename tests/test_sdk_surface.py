@@ -47,9 +47,7 @@ def test_summarize_sends_memory_ids():
     with patch("llama_index_dakera.knowledge_graph.DakeraClient", return_value=client):
         kg = DakeraKnowledgeGraph(api_url="http://localhost:3000", agent_id="a")
     kg.summarize(["m1", "m2"], target_type="semantic")
-    client.summarize.assert_called_once_with(
-        "a", memory_ids=["m1", "m2"], target_type="semantic"
-    )
+    client.summarize.assert_called_once_with("a", memory_ids=["m1", "m2"], target_type="semantic")
 
 
 def test_namespace_stats_maps_index_stats():
@@ -65,8 +63,9 @@ def test_namespace_stats_maps_index_stats():
 def test_index_store_delete_uses_filter_not_delete_all():
     client = _spec_client()
     client.delete.return_value = {"deleted": 1, "failed": 0, "errors": []}
-    with patch("llama_index_dakera.index_store.DakeraClient", return_value=client), patch(
-        "llama_index_dakera.index_store.AsyncDakeraClient"
+    with (
+        patch("llama_index_dakera.index_store.DakeraClient", return_value=client),
+        patch("llama_index_dakera.index_store.AsyncDakeraClient"),
     ):
         store = DakeraIndexStore(api_url="http://localhost:3000", namespace="docs")
     store.delete("doc-1")
@@ -81,9 +80,12 @@ def test_memory_store_get_forwards_tags():
 
     client = _spec_client()
     client.recall.return_value = RecallResponse.from_dict({"memories": []})
-    with patch("llama_index_dakera.memory_store.DakeraClient", return_value=client), patch(
-        "llama_index_dakera.memory_store.AsyncDakeraClient",
-        return_value=create_autospec(AsyncDakeraClient, instance=True),
+    with (
+        patch("llama_index_dakera.memory_store.DakeraClient", return_value=client),
+        patch(
+            "llama_index_dakera.memory_store.AsyncDakeraClient",
+            return_value=create_autospec(AsyncDakeraClient, instance=True),
+        ),
     ):
         store = DakeraMemoryStore(api_url="http://localhost:3000", agent_id="a")
     assert store.get("q", tags=["work"]) == []
@@ -99,9 +101,12 @@ def _memory_store(client: DakeraClient, async_client=None):
 
     from llama_index_dakera import DakeraMemoryStore
 
-    with patch("llama_index_dakera.memory_store.DakeraClient", return_value=client), patch(
-        "llama_index_dakera.memory_store.AsyncDakeraClient",
-        return_value=async_client or create_autospec(AsyncDakeraClient, instance=True),
+    with (
+        patch("llama_index_dakera.memory_store.DakeraClient", return_value=client),
+        patch(
+            "llama_index_dakera.memory_store.AsyncDakeraClient",
+            return_value=async_client or create_autospec(AsyncDakeraClient, instance=True),
+        ),
     ):
         return DakeraMemoryStore(api_url="http://localhost:3000", agent_id="a", recall_k=2)
 

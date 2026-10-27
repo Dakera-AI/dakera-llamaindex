@@ -103,3 +103,75 @@ def test_index_store_add_and_query():
     result = index.query(VectorStoreQuery(query_str="memory safe language", similarity_top_k=1))
     assert result.ids == ["n1"]
     assert result.nodes is not None and result.nodes[0].metadata["lang"] == "rust"
+
+
+def _index():  # type: ignore[no-untyped-def]
+    from llama_index.core import Document, Settings, StorageContext, VectorStoreIndex
+
+    Settings.embed_model = None  # the Dakera server embeds; no embedding API call
+    store = DakeraIndexStore(
+        api_url=API_URL, api_key=API_KEY, namespace=f"li-it-idx-{uuid.uuid4().hex[:10]}"
+    )
+    docs = [
+        Document(
+            text="Rust provides memory safety without garbage collection.",
+            metadata={"lang": "rust", "year": 2015},
+            id_="doc-rust",
+        ),
+        Document(
+            text="FastAPI is a modern Python web framework built on Starlette.",
+            metadata={"lang": "python", "year": 2018},
+            id_="doc-fastapi",
+        ),
+        Document(
+            text="Go is designed for concurrent systems programming at Google.",
+            metadata={"lang": "go", "year": 2012},
+            id_="doc-go",
+        ),
+    ]
+    storage = StorageContext.from_defaults(vector_store=store)
+    return VectorStoreIndex.from_documents(docs, storage_context=storage), store
+
+
+def test_vector_store_index_retrieval_filters_modes_and_delete():
+    from llama_index.core.vector_stores.types import (
+        FilterOperator,
+        MetadataFilter,
+        MetadataFilters,
+    )
+
+    index, store = _index()
+    top = index.as_retriever(similarity_top_k=1).retrieve("memory safe language")[0]
+    assert top.node.ref_doc_id == "doc-rust"
+
+    newer = MetadataFilters(
+        filters=[MetadataFilter(key="year", value=2014, operator=FilterOperator.GT)]
+    )
+    hits = index.as_retriever(similarity_top_k=3, filters=newer).retrieve("programming")
+    assert sorted(h.node.metadata["lang"] for h in hits) == ["python", "rust"]
+
+    keyword = index.as_retriever(
+        similarity_top_k=1, vector_store_query_mode="hybrid", alpha=0.0
+    ).retrieve("Starlette")
+    assert keyword[0].node.ref_doc_id == "doc-fastapi"
+    text = index.as_retriever(similarity_top_k=1, vector_store_query_mode="text_search")
+    assert text.retrieve("Google concurrent")[0].node.ref_doc_id == "doc-go"
+
+    index.delete_ref_doc("doc-rust")
+    left = index.as_retriever(similarity_top_k=5).retrieve("memory safety")
+    assert "doc-rust" not in {h.node.ref_doc_id for h in left}
+
+
+async def test_memory_block_stores_flushed_messages_and_recalls_them():
+    from llama_index.core.base.llms.types import ChatMessage, MessageRole
+    from llama_index.core.memory import Memory
+
+    from llama_index_dakera import DakeraMemoryBlock
+
+    store = _store(_agent())
+    block = DakeraMemoryBlock(memory_store=store)
+    await block.aput([ChatMessage(role=MessageRole.USER, content="My project is NeuralBridge.")])
+    memory = Memory.from_defaults(session_id="s1", memory_blocks=[block])
+    await memory.aput(ChatMessage(role=MessageRole.USER, content="What is my project?"))
+    messages = await memory.aget()
+    assert "NeuralBridge" in messages[0].content

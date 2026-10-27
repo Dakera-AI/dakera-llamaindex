@@ -14,8 +14,20 @@ def _ranked(response: RecallResponse, top_k: int) -> list[RecalledMemory]:
     Recalls ask for ``neighborhood_mode="separate"``, so a v0.12.3+ server keeps the
     session neighbourhood context out of ``memories``; a server up to v0.12.2
     appends it inline (unmarked), so the list is cut at ``top_k`` too.
+
+    The server also derives sentence sub-memories from each stored memory and may
+    recall them next to it: of a memory and the sentences derived from it, only the
+    best ranked is kept, so the results do not repeat a text.
     """
-    return response.ranked[:top_k]
+    kept: list[RecalledMemory] = []
+    seen: set[str] = set()
+    for m in response.ranked[:top_k]:
+        # A memory and the sentences derived from it share one key: its id.
+        key = (m.metadata or {}).get("source_memory_id") or m.id
+        if key not in seen:
+            seen.add(key)
+            kept.append(m)
+    return kept
 
 
 def _result(m: RecalledMemory) -> dict[str, Any]:
@@ -29,10 +41,22 @@ def _result(m: RecalledMemory) -> dict[str, Any]:
 
 
 class DakeraMemoryStore:
-    """Persistent agent memory store for LlamaIndex agents.
+    """Persistent memory of one agent, stored on a Dakera server.
 
-    Supports memory types, tags, TTL, batch operations, hybrid search,
-    sessions, and importance scoring.
+    :meth:`put` stores a memory (with type, importance, tags, TTL, session and event
+    time); :meth:`get` recalls the memories most relevant to a query (decay-weighted
+    by importance, recency and access on the server); :meth:`hybrid_search`,
+    :meth:`batch_get`, :meth:`delete`, :meth:`update_importance`, :meth:`consolidate`
+    and :meth:`stats` complete it, with async :meth:`aput` / :meth:`aget`. Use it
+    with LlamaIndex ``Memory`` through :class:`DakeraMemoryBlock`.
+
+    Args:
+        api_url: Dakera server URL, e.g. ``http://localhost:3000``.
+        agent_id: The agent whose memories are stored and recalled.
+        api_key: Dakera API key (empty when the server runs without auth).
+        recall_k: Memories :meth:`get` returns by default.
+        min_importance: Recall only memories at least this important (``0`` = all).
+        default_importance: Importance (0-1) of stored memories.
     """
 
     def __init__(
@@ -63,11 +87,15 @@ class DakeraMemoryStore:
         session_id: str | None = None,
         event_time: int | float | str | datetime | None = None,
     ) -> dict[str, Any]:
-        """Store a memory with full parameter control.
+        """Store a memory; returns the server's answer (with the new memory's ``id``).
 
-        ``event_time`` is when the memory's event happened (Unix seconds, an RFC 3339
-        string or a timezone-aware ``datetime``); the server (v0.12.3+) uses it for
-        recency and ``since`` / ``until`` instead of the ingest time.
+        ``memory_type`` is ``episodic``, ``semantic``, ``procedural`` or ``working``.
+        On a v0.12.3+ server the answer also carries ``truncated`` / ``embedded_tokens``
+        when the content is longer than the embedding model reads, and ``warnings``
+        naming ignored request fields. ``event_time`` is when the memory's event
+        happened (Unix seconds, an RFC 3339 string or a timezone-aware ``datetime``);
+        the server (v0.12.3+) uses it for recency and ``since`` / ``until`` instead of
+        the ingest time.
         """
         kwargs: dict[str, Any] = {
             "memory_type": memory_type,
@@ -95,11 +123,13 @@ class DakeraMemoryStore:
         min_importance: float | None = None,
         rerank: bool | None = None,
     ) -> list[dict[str, Any]]:
-        """Semantic recall with optional filtering.
+        """Recall the memories most relevant to ``query``, best first.
 
-        Returns at most ``top_k`` (default ``recall_k``) ranked memories, best first;
-        ``score`` is the server's ranking score (``rank_score`` on v0.12.3+).
-        ``rerank=False`` skips the cross-encoder reranking (server default: on).
+        Returns at most ``top_k`` (default ``recall_k``) memories as
+        ``[{"content", "id", "score", "importance", "metadata"}, ...]``; ``score`` is
+        the server's ranking score (``rank_score`` on v0.12.3+). ``tags`` keeps
+        memories carrying at least one of them; ``rerank=False`` skips the
+        cross-encoder reranking (server default: on).
         """
         k = top_k if top_k is not None else self.recall_k
         min_imp = (
@@ -124,7 +154,11 @@ class DakeraMemoryStore:
         query: str,
         top_k: int | None = None,
     ) -> list[dict[str, Any]]:
-        """Combined vector + BM25 search via routing."""
+        """Search the agent's memories with the server's memory search, best first.
+
+        ``POST /v1/memory/search`` combines vector similarity and BM25 on the server;
+        returns ``[{"content", "id", "score"}, ...]``.
+        """
         k = top_k if top_k is not None else self.recall_k
         results = self._client.search_memories(self.agent_id, query=query, top_k=k)
         return [
@@ -133,16 +167,14 @@ class DakeraMemoryStore:
         ]
 
     def batch_get(self, queries: list[str], top_k: int | None = None) -> list[list[dict[str, Any]]]:
-        """Run multiple recall queries in batch."""
+        """Recall for several queries; one list per query (as :meth:`get` returns)."""
         k = top_k if top_k is not None else self.recall_k
         results = []
         for q in queries:
             response = self._client.recall(
                 self.agent_id, query=q, top_k=k, neighborhood_mode="separate"
             )
-            results.append(
-                [{"content": m.content, "id": m.id, "score": m.score} for m in _ranked(response, k)]
-            )
+            results.append([_result(m) for m in _ranked(response, k)])
         return results
 
     def delete(self, memory_id: str) -> None:
@@ -165,7 +197,8 @@ class DakeraMemoryStore:
 
         ``memory_ids`` picks the memories (at least two); without it the server
         merges up to 5 memories of the agent's most common type. ``target_type`` is
-        the memory type of the merged memory.
+        the memory type of the merged memory. The server refuses (``400``) memories
+        with a TTL, an attachment or user metadata (``metadata`` or ``event_time``).
         """
         kwargs: dict[str, Any] = {}
         if memory_ids is not None:
@@ -177,7 +210,7 @@ class DakeraMemoryStore:
         return self._client.consolidate(self.agent_id, **kwargs)
 
     def stats(self) -> dict[str, Any]:
-        """Get agent memory statistics."""
+        """Agent statistics: ``total_memories``, ``memories_by_type``, sessions, ..."""
         return self._client.agent_stats(self.agent_id)
 
     async def aput(
@@ -216,13 +249,19 @@ class DakeraMemoryStore:
         *,
         tags: list[str] | None = None,
         memory_type: str | None = None,
+        min_importance: float | None = None,
         rerank: bool | None = None,
     ) -> list[dict[str, Any]]:
-        """Async semantic recall with filtering (see :meth:`get`)."""
+        """Async :meth:`get`."""
         k = top_k if top_k is not None else self.recall_k
+        min_imp = (
+            min_importance
+            if min_importance is not None
+            else (self.min_importance if self.min_importance > 0 else None)
+        )
         kwargs: dict[str, Any] = {"top_k": k, "neighborhood_mode": "separate"}
-        if self.min_importance > 0:
-            kwargs["min_importance"] = self.min_importance
+        if min_imp:
+            kwargs["min_importance"] = min_imp
         if tags:
             kwargs["tags"] = tags
         if memory_type:
