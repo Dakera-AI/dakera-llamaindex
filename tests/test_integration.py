@@ -42,8 +42,11 @@ def _store(agent_id: str, **kwargs: int) -> DakeraMemoryStore:
 
 def test_recall_of_an_agent_without_memories_is_empty():
     store = _store(_agent())
-    assert store.get("anything") == []
-    assert asyncio.run(store.aget("anything")) == []
+    # A query that a server before v0.12.3 answers with 404 NAMESPACE_NOT_FOUND.
+    assert store.get("What do I build?") == []
+    assert asyncio.run(store.aget("What do I build?")) == []
+    assert store.batch_get(["What do I build?"]) == [[]]
+    assert store.hybrid_search("What do I build?") == []
 
 
 def test_session_recall_returns_at_most_top_k():

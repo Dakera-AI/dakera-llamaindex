@@ -56,6 +56,11 @@ additions are ignored by older servers).
   snippet run against a v0.12.3 server.
 
 ### Fixed
+- `DakeraMemoryStore` (and so `DakeraMemoryBlock`) on a server before v0.12.3: the first recall
+  of a new agent raised `NotFoundError` (`404 NAMESPACE_NOT_FOUND`). Such a server answers a
+  recall or search of an agent that has stored nothing with a 404 for some queries (e.g. "What
+  do I build?"); `get()`, `aget()`, `batch_get()` and `hybrid_search()` now treat it as no
+  memories, like a v0.12.3 server. Other 404s are still raised.
 - The README's agent example passed `DakeraMemoryStore` as a `ChatMemoryBuffer` chat store, which
   LlamaIndex rejects (it is not a `BaseChatStore`), and used `ReActAgent.from_tools`, which
   LlamaIndex 0.14 no longer has; `DakeraMemoryBlock` with `Memory` replaces it.

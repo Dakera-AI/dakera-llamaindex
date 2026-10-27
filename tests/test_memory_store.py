@@ -1,9 +1,10 @@
 """Tests for DakeraMemoryStore (LlamaIndex integration)."""
 
+import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from dakera import RecallResponse
+from dakera import ErrorCode, NotFoundError, RecallResponse
 
 from llama_index_dakera import DakeraMemoryStore
 
@@ -78,3 +79,34 @@ async def test_aget_takes_min_importance(mem_store):
     mock_async.recall.return_value = RecallResponse.from_dict({"memories": []})
     await store.aget("q", min_importance=0.6)
     assert mock_async.recall.call_args.kwargs["min_importance"] == 0.6
+
+
+def _namespace_not_found() -> NotFoundError:
+    return NotFoundError(
+        "Namespace not found: _dakera_agent_agent-1",
+        status_code=404,
+        code=ErrorCode.NAMESPACE_NOT_FOUND,
+    )
+
+
+def test_agent_without_memories_on_an_older_server_recalls_nothing(mem_store):
+    # A server before v0.12.3 answers 404 NAMESPACE_NOT_FOUND for an agent that has
+    # stored nothing yet; the agent's first turn must not fail.
+    store, mock_client, mock_async = mem_store
+    mock_client.recall.side_effect = _namespace_not_found()
+    mock_client.search_memories.side_effect = _namespace_not_found()
+    mock_async.recall.side_effect = _namespace_not_found()
+    assert store.get("What do I build?") == []
+    assert store.batch_get(["a", "b"]) == [[], []]
+    assert store.hybrid_search("What do I build?") == []
+    assert asyncio.run(store.aget("What do I build?")) == []
+
+
+def test_other_not_found_errors_are_raised(mem_store):
+    store, mock_client, mock_async = mem_store
+    mock_client.recall.side_effect = NotFoundError("gone", status_code=404)
+    mock_async.recall.side_effect = NotFoundError("gone", status_code=404)
+    with pytest.raises(NotFoundError):
+        store.get("What do I build?")
+    with pytest.raises(NotFoundError):
+        asyncio.run(store.aget("What do I build?"))

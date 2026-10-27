@@ -5,10 +5,27 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-from dakera import AsyncDakeraClient, DakeraClient, RecalledMemory, RecallResponse
+from dakera import (
+    AsyncDakeraClient,
+    DakeraClient,
+    ErrorCode,
+    NotFoundError,
+    RecalledMemory,
+    RecallResponse,
+)
 
 
-def _ranked(response: RecallResponse, top_k: int) -> list[RecalledMemory]:
+def _agent_has_no_memories(err: NotFoundError) -> bool:
+    """Whether a recall / search failed only because the agent has stored nothing yet.
+
+    A server before v0.12.3 answers a recall or search of an agent that has no memories
+    with ``404 NAMESPACE_NOT_FOUND`` for some queries (the agent's namespace is created
+    by its first stored memory); v0.12.3 returns no memories.
+    """
+    return err.code == ErrorCode.NAMESPACE_NOT_FOUND
+
+
+def _ranked(response: RecallResponse | None, top_k: int) -> list[RecalledMemory]:
     """The ranked results of a recall, at most ``top_k`` of them.
 
     Recalls ask for ``neighborhood_mode="separate"``, so a v0.12.3+ server keeps the
@@ -21,6 +38,8 @@ def _ranked(response: RecallResponse, top_k: int) -> list[RecalledMemory]:
     """
     kept: list[RecalledMemory] = []
     seen: set[str] = set()
+    if response is None:
+        return kept
     for m in response.ranked[:top_k]:
         # A memory and the sentences derived from it share one key: its id.
         key = (m.metadata or {}).get("source_memory_id") or m.id
@@ -146,8 +165,7 @@ class DakeraMemoryStore:
             kwargs["memory_type"] = memory_type
         if rerank is not None:
             kwargs["rerank"] = rerank
-        response = self._client.recall(self.agent_id, query=query, **kwargs)
-        return [_result(m) for m in _ranked(response, k)]
+        return [_result(m) for m in _ranked(self._recall(query, **kwargs), k)]
 
     def hybrid_search(
         self,
@@ -160,7 +178,12 @@ class DakeraMemoryStore:
         returns ``[{"content", "id", "score"}, ...]``.
         """
         k = top_k if top_k is not None else self.recall_k
-        results = self._client.search_memories(self.agent_id, query=query, top_k=k)
+        try:
+            results = self._client.search_memories(self.agent_id, query=query, top_k=k)
+        except NotFoundError as err:
+            if not _agent_has_no_memories(err):
+                raise
+            return []
         return [
             {"content": m.get("content", ""), "id": m.get("id", ""), "score": m.get("score", 0.0)}
             for m in results
@@ -171,11 +194,18 @@ class DakeraMemoryStore:
         k = top_k if top_k is not None else self.recall_k
         results = []
         for q in queries:
-            response = self._client.recall(
-                self.agent_id, query=q, top_k=k, neighborhood_mode="separate"
-            )
+            response = self._recall(q, top_k=k, neighborhood_mode="separate")
             results.append([_result(m) for m in _ranked(response, k)])
         return results
+
+    def _recall(self, query: str, **kwargs: Any) -> RecallResponse | None:
+        """Recall for this agent; ``None`` when it has stored nothing yet (older servers)."""
+        try:
+            return self._client.recall(self.agent_id, query=query, **kwargs)
+        except NotFoundError as err:
+            if not _agent_has_no_memories(err):
+                raise
+            return None
 
     def delete(self, memory_id: str) -> None:
         """Delete a memory by ID."""
@@ -268,7 +298,13 @@ class DakeraMemoryStore:
             kwargs["memory_type"] = memory_type
         if rerank is not None:
             kwargs["rerank"] = rerank
-        response = await self._async_client.recall(self.agent_id, query=query, **kwargs)
+        response: RecallResponse | None
+        try:
+            response = await self._async_client.recall(self.agent_id, query=query, **kwargs)
+        except NotFoundError as err:
+            if not _agent_has_no_memories(err):
+                raise
+            response = None
         return [_result(m) for m in _ranked(response, k)]
 
     def __repr__(self) -> str:
