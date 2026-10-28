@@ -71,6 +71,7 @@ def test_memory_entities(extractor):
 def test_configure_calls_client(extractor):
     ext, mock_client = extractor
     ext.configure(entity_types=["PERSON", "ORG"])
+    # The agent's memories live in its memory namespace; extract_entities is required.
     mock_client.configure_namespace_ner.assert_called_once_with(
-        "test-agent", entity_types=["PERSON", "ORG"]
+        "_dakera_agent_test-agent", extract_entities=True, entity_types=["PERSON", "ORG"]
     )

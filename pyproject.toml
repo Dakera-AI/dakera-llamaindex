@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "llamaindex-dakera"
-version = "0.3.0"
+version = "0.4.0"
 description = "LlamaIndex integration for the Dakera AI memory platform"
 readme = "README.md"
 license = {text = "MIT"}
@@ -23,16 +23,18 @@ classifiers = [
     "Typing :: Typed",
 ]
 keywords = ["llamaindex", "llama-index", "dakera", "memory", "vector", "ai", "rag"]
-dependencies = ["dakera>=0.13.1", "llama-index-core>=0.10.0"]
+dependencies = ["dakera>=0.14.1", "llama-index-core>=0.12.35"]
 
 [project.optional-dependencies]
 dev = ["pytest>=7.0.0", "pytest-asyncio>=0.21.0", "responses>=0.23.0",
-       "ruff>=0.1.0", "llama-index-core>=0.10.0", "mypy>=1.0.0", "pip-audit>=2.0.0"]
+       "ruff>=0.1.0", "llama-index-core>=0.12.35", "mypy>=1.0.0", "pip-audit>=2.0.0"]
 
 [project.urls]
 Homepage = "https://github.com/dakera-ai/dakera-llamaindex"
-Documentation = "https://docs.dakera.ai/integrations/llamaindex"
+Documentation = "https://dakera.ai/integrations/llamaindex.html"
 Repository = "https://github.com/dakera-ai/dakera-llamaindex"
+Changelog = "https://github.com/Dakera-AI/dakera-llamaindex/blob/main/CHANGELOG.md"
+Issues = "https://github.com/Dakera-AI/dakera-llamaindex/issues"
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -43,6 +45,7 @@ llama_index_dakera = ["py.typed"]
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+markers = ["integration: live tests against a Dakera server (need DAKERA_API_URL)"]
 
 [tool.ruff]
 line-length = 100

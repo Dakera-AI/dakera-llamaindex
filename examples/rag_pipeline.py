@@ -1,58 +1,70 @@
-"""RAG pipeline using DakeraIndexStore with LlamaIndex.
+"""Retrieval-augmented generation with DakeraIndexStore and VectorStoreIndex.
 
-Indexes documents into Dakera's vector store and queries them using
-LlamaIndex's VectorStoreQuery interface. No local embeddings needed —
-Dakera handles embedding server-side.
+Indexes documents into Dakera (the server embeds them: no local embedding
+model or embedding API key), retrieves the context for a question and builds
+the RAG prompt. With an LLM configured, ``index.as_query_engine()`` answers
+directly.
 
-Usage:
-    export DAKERA_API_URL="http://localhost:3000"
-    export DAKERA_API_KEY="dk-..."          # optional
-    pip install llamaindex-dakera llama-index-core
-    python rag_pipeline.py
+Run a Dakera server first (see the README), then:
+
+    pip install llamaindex-dakera
+    export DAKERA_API_URL=http://localhost:3000
+    export DAKERA_API_KEY=dk-mykey   # the server's root key; leave unset if auth is off
+    python examples/rag_pipeline.py
 """
 
 import os
+import uuid
 
-from llama_index.core.schema import TextNode
-from llama_index.core.vector_stores.types import VectorStoreQuery
+from llama_index.core import Document, PromptTemplate, Settings, StorageContext, VectorStoreIndex
 
 from llama_index_dakera import DakeraIndexStore
 
 api_url = os.environ.get("DAKERA_API_URL", "http://localhost:3000")
 api_key = os.environ.get("DAKERA_API_KEY", "")
 
+Settings.embed_model = None  # Dakera embeds on the server: no embedding API calls
+
 store = DakeraIndexStore(
     api_url=api_url,
-    namespace="llamaindex-rag-demo",
     api_key=api_key,
+    namespace=f"llamaindex-rag-{uuid.uuid4().hex[:8]}",
 )
-
-nodes = [
-    TextNode(
-        text="Dakera provides persistent memory for AI agents.",
+documents = [
+    Document(
+        text="Dakera is an AI agent memory server with server-side embedding.",
         metadata={"topic": "overview"},
+        id_="overview",
     ),
-    TextNode(
-        text="Vector search uses cosine similarity over embeddings.",
-        metadata={"topic": "search"},
+    Document(
+        text="Dakera decays memory importance over time, weighted by access.",
+        metadata={"topic": "concepts"},
+        id_="decay",
     ),
-    TextNode(
-        text="LlamaIndex orchestrates data ingestion for LLMs.",
+    Document(
+        text="LlamaIndex orchestrates data ingestion and retrieval for LLMs.",
         metadata={"topic": "framework"},
-    ),
-    TextNode(
-        text="Server-side embedding removes the need for local GPUs.",
-        metadata={"topic": "architecture"},
+        id_="llamaindex",
     ),
 ]
+index = VectorStoreIndex.from_documents(
+    documents, storage_context=StorageContext.from_defaults(vector_store=store)
+)
+print(f"Indexed {len(documents)} documents.")
 
-print("Indexing nodes...")
-ids = store.add(nodes)
-print(f"Indexed {len(ids)} nodes.")
+question = "How does Dakera handle memory decay?"
+nodes = index.as_retriever(similarity_top_k=2).retrieve(question)
+print(f"\nRetrieved for {question!r}:")
+for hit in nodes:
+    print(f"  [{hit.score:.3f}] ({hit.node.ref_doc_id}) {hit.node.get_content()}")
 
-query = VectorStoreQuery(query_str="How does Dakera handle embeddings?", similarity_top_k=2)
-result = store.query(query)
+prompt = PromptTemplate(
+    "Answer from the context only.\n\nContext:\n{context}\n\nQuestion: {question}"
+)
+context = "\n".join(f"- {hit.node.get_content()}" for hit in nodes)
+print("\nRAG prompt:\n" + prompt.format(context=context, question=question))
+# With an LLM (e.g. Settings.llm = OpenAI(model="gpt-4o")):
+#     print(index.as_query_engine(similarity_top_k=2).query(question))
 
-print(f"\nQuery: '{query.query_str}'")
-for node, score in zip(result.nodes or [], result.similarities or []):
-    print(f"  [{score:.3f}] {node.text}")
+index.delete_ref_doc("llamaindex")  # removes the document's nodes from Dakera
+print("\nDeleted the 'llamaindex' document.")

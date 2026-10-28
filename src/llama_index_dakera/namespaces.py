@@ -21,7 +21,7 @@ class DakeraNamespaceManager:
         index_type: str | None = None,
         metadata: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
-        """Create a namespace."""
+        """Create a namespace (``dimensions`` is required by the server)."""
         ns = self._client.create_namespace(
             name, dimensions=dimensions, index_type=index_type, metadata=metadata
         )
@@ -51,7 +51,7 @@ class DakeraNamespaceManager:
         ]
 
     def configure(self, name: str, **kwargs: Any) -> None:
-        """Update namespace configuration."""
+        """Update a namespace's configuration (e.g. ``dimension=1024, distance=...``)."""
         self._client.configure_namespace(name, **kwargs)
 
     def delete(self, name: str) -> None:
